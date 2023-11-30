@@ -23,22 +23,20 @@ public class BeeController : MonoBehaviour
 
     void MoveBee()
     {
-        Vector3 moveInput = new Vector3(Input.GetAxis("Horizontal"), 0, Input.GetAxis("Vertical"));
+        Vector3 moveInput = new Vector3(-Input.GetAxis("Horizontal"), 0, -Input.GetAxis("Vertical"));
+
         if (moveInput.magnitude > 0.1f)
         {
+            Quaternion rotation = Quaternion.LookRotation(moveInput, Vector3.up);
 
-            Quaternion rotation = Quaternion.LookRotation(moveInput);
-            rotation.x = 0;
+            transform.localRotation = Quaternion.Lerp(transform.localRotation, rotation, rotationSpeed * Time.deltaTime);
 
-            rotation.z = 0;
-
-            transform.rotation = Quaternion.Lerp(transform.rotation, rotation, rotationSpeed * Time.deltaTime);
-
-            rb.velocity = moveInput * moveSpeed;
+            rb.velocity = transform.forward * moveSpeed;
         }
     }
 
-            void UpdateAnimations()
+
+    void UpdateAnimations()
     {
         animator.SetBool("IsMoving", rb.velocity.magnitude > 0.1f);
         animator.SetBool("IsRotating", rb.angularVelocity.magnitude > 0.1f);
