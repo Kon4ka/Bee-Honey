@@ -1,5 +1,6 @@
+using System;
 using UnityEngine;
-using UnityEngine.WSA;
+using UnityEngine.Events;
 
 public class BeeController : MonoBehaviour
 {
@@ -20,6 +21,17 @@ public class BeeController : MonoBehaviour
     private int _health;
     private float lastDamageTime;
     private float damageCooldown = 3f;
+    private float playerLifetime = 0f;
+    private bool _canMove = true;
+
+    public class HealthZeroEvent : UnityEvent<float> { }
+    public HealthZeroEvent OnPlayerHealthZero = new HealthZeroEvent();
+    public UnityEvent OnPollenCountReset;
+    public bool CanMove
+    {
+        get { return _canMove; }
+        set { _canMove = value; }
+    }
 
     void Start()
     {
@@ -27,6 +39,9 @@ public class BeeController : MonoBehaviour
         rb = GetComponent<Rigidbody>();
         animator = GetComponent<Animator>();
         _health = startHealth;
+        InvokeRepeating("UpdatePlayerLifetime", 1f, 1f); // Обновление времени жизни каждую секунду
+        if (OnPollenCountReset == null)
+            OnPollenCountReset = new UnityEvent();
     }
 
     void FixedUpdate()
@@ -38,14 +53,17 @@ public class BeeController : MonoBehaviour
 
     void MoveBee(Vector3 moveInput)
     {
-        if (moveInput.magnitude >= 0.1f)
+        if (CanMove)
         {
-            float targetAngle = Mathf.Atan2(moveInput.x, moveInput.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
-            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
-            transform.rotation = Quaternion.Euler(0f, angle, 0f);
+            if (moveInput.magnitude >= 0.1f)
+            {
+                float targetAngle = Mathf.Atan2(moveInput.x, moveInput.z) * Mathf.Rad2Deg + cam.eulerAngles.y;
+                float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
+                transform.rotation = Quaternion.Euler(0f, angle, 0f);
 
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
-            controller.Move(moveDir.normalized * moveSpeed * Time.deltaTime);
+                Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
+                controller.Move(moveDir.normalized * moveSpeed * Time.deltaTime);
+            }
         }
     }
 
@@ -62,9 +80,10 @@ public class BeeController : MonoBehaviour
         _health -= damage;
         ui.SetHealth(_health);
 
-        if (_health <= 0 )
+        if (_health <= 0)
         {
             Debug.Log("Game over");
+            OnPlayerHealthZero.Invoke(GetPlayerLifetime()); // Передаем счет игрока при вызове события
         }
     }
 
@@ -116,7 +135,7 @@ public class BeeController : MonoBehaviour
         }
     }
 
-    void CollectPollen()
+    public void CollectPollen()
     {
         pollenCount++;
         ui.pollenCount++;
@@ -124,5 +143,76 @@ public class BeeController : MonoBehaviour
         Debug.Log("Pollen collected: " + pollenCount);
 
         // Здесь вы можете добавить дополнительные действия при сборе пыльцы
+    }
+
+    void UpdatePlayerLifetime()
+    {
+        playerLifetime += 1f; // Увеличиваем время жизни игрока на 1 секунду
+    }
+    public float GetPlayerLifetime()
+    {
+        Debug.Log("Time: " + playerLifetime.ToString() + " Pollens: " + pollenCount.ToString() + " = " + (playerLifetime - pollenCount * 5).ToString());
+        return playerLifetime - pollenCount*5; //лишняя пыльца сокращает время на раунд
+    }
+
+    public int GetPollenCount()
+    {
+        return pollenCount;
+    }
+
+    public void RestorePlayer()
+    {
+        // Телепортация на начало уровня
+        TeleportToStart();
+
+        // Обнуление счетчика pollenCount
+        ResetPollenCount();
+
+        // Обнуление времени, потраченного на уровень
+        ResetPlayerLifetime();
+
+        // Восстановление максимального здоровья
+        RestoreMaxHealth();
+
+        // Обнуление lastDamageTime
+        ResetLastDamageTime();
+
+        // Включение возможности перемещения
+        CanMove = true;
+
+        OnPollenCountReset.Invoke();
+    }
+
+    public void TeleportToStart()
+    {
+        // Здесь вы должны реализовать телепортацию на начало уровня.
+        // Например, перемещение игрока к стартовой точке.
+        transform.position = new Vector3(1.56f, 1f, 0f); // Это просто пример, замените на свою логику.
+    }
+
+    public void ResetPollenCount()
+    {
+        // Обнуление счетчика пыльцы
+        pollenCount = 0;
+        ui.pollenCount = 0; 
+    }
+
+    public void ResetPlayerLifetime()
+    {
+        // Обнуление времени, потраченного на уровень
+        playerLifetime = 0f;
+    }
+
+    public void RestoreMaxHealth()
+    {
+        // Восстановление максимального здоровья
+        _health = startHealth;
+        ui.SetHealth(_health); // Если у вас есть интерфейс здоровья, обновите его также.
+    }
+
+    public void ResetLastDamageTime()
+    {
+        // Обнуление времени последнего полученного урона
+        lastDamageTime = 0f;
     }
 }
