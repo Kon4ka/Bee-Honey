@@ -24,6 +24,9 @@
 
 Вы можете скачать сборку игры [здесь](https://drive.google.com/file/d/1E-CULYA-3NyphR9eU0E80XFZHFFRNlRN/view?usp=sharing).
 
+## Благодарность
+[whitewolf185](https://github.com/whitewolf185) - за небольшие правки кода и помощь с камерой!
+
 ## Как играть
 
 1. Скачайте сборку игры по предоставленной ссылке.
